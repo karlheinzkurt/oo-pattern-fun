@@ -1,12 +1,10 @@
 #include <memory>
 #include <iostream>
 
-class Element
+struct Element
 {
-   public:
-   class Builder
+   struct Builder
    {
-      public:
       Builder() : m_length( 0 ), m_width( 0 ), m_height( 0 ) {}
 
       Builder& withLength( int const l )
@@ -21,12 +19,12 @@ class Element
       Element build() const
       {  return Element( *this ); } 
 
-      private:
+   private:
       int m_length;
       int m_width;
       int m_height;
 
-      friend class Element;
+      friend class Element; ///< \todo Avoid friend here
    };
 
    Element( Builder const& b ) :
@@ -44,9 +42,9 @@ class Element
    }
 
    friend std::ostream& operator<<( std::ostream& os, Element const& e )
-   {  return ( os << e.m_length << "x" << e.m_width << "x" << e.m_height ); }
+   {  return ( os << "Length: " << e.m_length << ", Width: " << e.m_width << ", Height: " << e.m_height ); }
 
-   private:
+private:
    int m_length;
    int m_width;
    int m_height;
@@ -54,9 +52,16 @@ class Element
 
 int main( int argc, char** argv )
 {
-   Element element( Element::Builder().withLength( 20 ).withWidth( 30 ).build() );
-   std::unique_ptr< Element > p_element( new Element( Element::Builder().withWidth( 10 ).withHeight( 15 ).build() ) );
-   std::cout << element << " - " << (*p_element) << std::endl;
-   return 0;
+   {
+      auto element(Element::Builder().withLength( 20 ).withWidth( 30 ).build());
+      std::cout << element << '\n';
+   }
+   {
+      auto element(Element::Builder().withWidth( 30 ).withHeight( 15 ).build());
+      std::cout << element << '\n';
+   }
+   {
+      auto element(Element::Builder().withHeight( 30 ).withLength( 15 ).withWidth( 3 ).build());
+      std::cout << element << '\n';
+   }
 }
-

@@ -3,15 +3,24 @@
 
 namespace API
 {
-   class Processor
+   struct Processor
    {
-      public:
       Processor();
       ~Processor();
-      void Print( void ) const;
+      
+      Processor(Processor const&) = delete;
+      Processor& operator==(Processor const&) = delete;
+      Processor(Processor&&) = delete;
+      Processor& operator==(Processor&&) = delete;      
+      
+      void print() const;
    
-      private:
-      class PrivateProcessor;
-      PrivateProcessor* m_p;            
+   private:   
+      /** See Scott Meyers Effective Modern C++ about Pimpl and:
+            - copyable/movable
+            - unique_ptr/shared_ptr
+       */
+      struct Impl;
+      Impl* m_pimpl;
    };
 }

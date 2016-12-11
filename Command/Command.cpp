@@ -1,7 +1,6 @@
 #include <iostream>
 #include <array>
 #include <memory>
-#include <algorithm>
 
 #include <boost/algorithm/string.hpp>
 
@@ -10,6 +9,7 @@ namespace API
    struct Command
    {
       virtual ~Command() {}
+      
       virtual void execute() = 0;
    };
 }
@@ -39,15 +39,13 @@ namespace Concrete
 
 int main( int argc, char** argv )
 {
-   typedef std::array< std::unique_ptr< API::Command >, 3 > CommandListType;
-   CommandListType const commands = 
+   std::array< std::unique_ptr< API::Command >, 4 > const commands = 
    { 
        std::make_unique< Concrete::ReadCommand >()
       ,std::make_unique< Concrete::WriteCommand >()
       ,std::make_unique< Concrete::ComplexCommand >()
+      ,std::make_unique< Concrete::ReadCommand >()
    };
 
-   std::for_each( commands.begin(), commands.end(), []( CommandListType::value_type const& command )
-   {  command->execute(); } );
+   for ( auto& command : commands ) { command->execute(); }; ///< Execute all in unified way
 }
-

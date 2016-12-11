@@ -1,76 +1,73 @@
 #include <iostream>
-#include <set>
+#include <vector>
+#include <memory>
+#include <algorithm>
+#include <sstream>
 
 namespace API
 {
-   class Graphic
+   struct Graphic
    {
-      public:
       virtual ~Graphic() {}
-
-      virtual void print() const = 0;  
+      
+      virtual std::string toString() const = 0;  
    };
+   
+   bool operator==(Graphic const& a, Graphic const& b)
+   {  return a.toString().compare(b.toString()) == 0; }
 }
 
 namespace Concrete
 {
-   class Ellipse : public API::Graphic
+   struct Ellipse : public API::Graphic
    {
-      public:
-      void print() const
-      {  std::cout << "ellipse" << std::endl; }  
+      std::string toString() const override
+      {  return "ellipse\n"; }  
    };
 
-   class Rectangle : public API::Graphic
+   struct Rectangle : public API::Graphic
    {
-      public:
-      void print() const
-      {  std::cout << "rectangle" << std::endl; }  
+      std::string toString() const override
+      {  return "rectangle\n"; }  
    };
 
-   class GraphicComposite : public API::Graphic
-   {
-      private:
-      typedef std::set< API::Graphic* > GraphicType;
-      GraphicType m_childs;   
-
-      public:
-      ~GraphicComposite()
-      {
-         GraphicType::iterator const ge( m_childs.end() );
-         for ( GraphicType::iterator gc( m_childs.begin() ); gc != ge; ++gc )
-         {  delete *gc; }         
-      }
-   
-      void print() const
+   struct GraphicComposite : public API::Graphic
+   {   
+      std::string toString() const override
       {  
-         std::set< API::Graphic* >::const_iterator const ce( m_childs.end() );
-         for ( std::set< API::Graphic* >::const_iterator cc( m_childs.begin() ); cc != ce; ++cc )
-         {  (*cc)->print(); }
+         std::ostringstream os;
+         for ( auto const& c : m_childs ) { os << c->toString(); }
+         return os.str();
       }
 
-      void add( API::Graphic* const g )
-      {  m_childs.insert( g ); }
+      void add(std::unique_ptr<API::Graphic> g)
+      {  m_childs.emplace_back(std::move(g)); }
 
-      void remove( API::Graphic* const g )
-      {  m_childs.erase( g ); }
+      void remove(API::Graphic const& g)
+      {  
+         std::remove_if(m_childs.begin(), m_childs.end(), [&](GraphicType::value_type const& c)
+         {  return *c == g; });  
+      }
+      
+   private:
+      typedef std::vector<std::unique_ptr<API::Graphic>> GraphicType;
+      GraphicType m_childs;
    };
 }
 
 int main( int argc, char** argv )
 {
-   Concrete::GraphicComposite* container( new Concrete::GraphicComposite );
+   auto container(std::make_unique<Concrete::GraphicComposite>());
    for ( unsigned int i = 0; i < 3; ++i )
    {
-      Concrete::GraphicComposite* subContainer( new Concrete::GraphicComposite );
-      subContainer->add( new Concrete::Rectangle );
-      subContainer->add( new Concrete::Ellipse );
-      container->add( subContainer );
+      auto subContainer(std::make_unique<Concrete::GraphicComposite>());
+      subContainer->add(std::make_unique<Concrete::Rectangle>());
+      subContainer->add(std::make_unique<Concrete::Ellipse>());
+      container->add(std::move(subContainer));
    }
-   container->add( new Concrete::Ellipse );   
-   container->add( new Concrete::Rectangle );   
+   container->add(std::make_unique<Concrete::Ellipse>());   
+   container->add(std::make_unique<Concrete::Rectangle>());   
 
-   container->print();
-   delete container;
+   std::cout << container->toString();
    return 0;
 }

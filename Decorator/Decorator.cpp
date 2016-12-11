@@ -1,57 +1,61 @@
 #include <iostream>
+#include <memory>
+#include <sstream>
 
 namespace API
 {
-   class TextInterface
+   struct TextInterface
    {
-      public:
       virtual ~TextInterface() {}
 
-      virtual std::ostream& Print( std::ostream& ) const = 0;
-      
-      friend std::ostream& operator<<( std::ostream& os, const TextInterface& Text )
-      {  return ( Text.Print( os ) ); }
+      virtual std::string toString() const = 0;
    };
-
-   class TextDecorator : public TextInterface
-   {
-      public:
-      TextDecorator( TextInterface* i ) : m_Component( i ) { }
-      virtual ~TextDecorator() { delete m_Component; }
-    
-      virtual std::ostream& Print( std::ostream& os ) const
-      {  return ( m_Component->Print( os ) ); } 
-
-      private:
-      TextInterface* m_Component;
-   };
+   
+   std::ostream& operator<<( std::ostream& os, TextInterface const& text )
+   {  return os << text.toString(); }
 } // API
 
 namespace Concrete
 {
-   class TextObject : public API::TextInterface
+   struct TextObject : public API::TextInterface
    {
-      public:
-      TextObject( const std::string& Text ) : m_Text( Text ) { }
+      TextObject( std::string const& text ) : m_text( text ) {}
 
-      std::ostream& Print( std::ostream& os ) const
-      {  return ( os << m_Text ); }
+      std::string toString() const override
+      {  return m_text; }
 
-      private:
-      std::string m_Text;
+   private:
+      std::string m_text;
    };
 
-   class PipeDecorator : public API::TextDecorator
+   struct PipeDecorator : public API::TextInterface
    {
-      public:
-      PipeDecorator( API::TextInterface* i ) : API::TextDecorator( i ) { } 
+      PipeDecorator( std::unique_ptr<API::TextInterface> decoratee ) : m_decoratee(std::move(decoratee)) {} 
 
-      std::ostream& Print( std::ostream& os ) const
+      std::string toString() const override
       {  
-         os << "|";
-         API::TextDecorator::Print( os );
-         return ( os << "|" );          
+         std::ostringstream os;
+         os << "|"  << m_decoratee->toString() << "|";
+         return os.str();
       }
+      
+   private:
+      std::unique_ptr<API::TextInterface> m_decoratee;
+   };
+   
+   struct MinusDecorator : public API::TextInterface
+   {
+      MinusDecorator( std::unique_ptr<API::TextInterface> decoratee ) : m_decoratee(std::move(decoratee)) {} 
+
+      std::string toString() const override
+      {  
+         std::ostringstream os;
+         os << "-"  << m_decoratee->toString() << "-";
+         return os.str();
+      }
+      
+   private:
+      std::unique_ptr<API::TextInterface> m_decoratee;
    };
 } // Concrete
 
@@ -59,9 +63,10 @@ int main( int argc, char** argv )
 {
    using namespace Concrete;
 
-   API::TextInterface* Text = new PipeDecorator( new PipeDecorator( new TextObject( "some text" ) ) );
-   std::cout << ( *Text );
-   delete Text;
+   auto text(std::make_unique<TextObject>("some text"));
+   std::cout << *text << '\n';
+   auto decoratedText(std::make_unique<PipeDecorator>(std::make_unique<MinusDecorator>(std::make_unique<PipeDecorator>(std::move(text)))));
+   std::cout << *decoratedText << '\n';
    return 0;
 }
 
