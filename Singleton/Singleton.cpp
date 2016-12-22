@@ -1,44 +1,43 @@
 
 #include <iostream>
+#include <memory>
+#include <mutex>
 
-class Server
+struct Server
 {
-   public:
-      template< typename T = Server > static Server* Instance( ) 
-      {  return ( s_instance ? s_instance : ( s_instance = new T( ) ) );}
+      static Server& getInstance();
    
-      virtual void Do() 
-      {  std::cout << "Server" << std::endl; }
-
-      virtual ~Server() {}
-
-   protected:
-      Server() : m_context( 0 ) {};
+      void run();
 
    private:
-      Server( Server const& );
-      Server& operator=( Server const & );
-
-      int m_context;
-
-   private:
-      static Server* s_instance;
+      Server() = default;
+      Server(Server&&) = default;
+      Server& operator=(Server&&) = default;
+      
+      Server(Server const&) = delete;
+      Server& operator=(Server const&) = delete;
 };
 
-Server* Server::s_instance = NULL;
-
-class SuperServer : public Server
+namespace
 {
-   public:
-      void Do()
-      {  std::cout << "Super server" << std::endl; }   
+   std::unique_ptr<Server> instance;
+   std::once_flag onceFlag;
+}
 
-   protected:
-      SuperServer() {}   
-};
+Server& Server::getInstance() 
+{  
+   std::call_once(onceFlag, []
+   {
+      instance.reset(new Server);
+   });
+   return *instance.get();
+}
 
+void Server::run()
+{  std::cout << "Server" << std::endl; }
+   
 int main( int argc, char** argv )
-{
-   Server* s = Server::Instance();
-   s->Do();
+{   
+   auto& server(Server::getInstance());
+   server.run();
 }

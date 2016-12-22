@@ -50,7 +50,7 @@ namespace Concrete
 
       int calculate( size_t const count, int const a, int const b ) const
       {  
-         std::unique_ptr< API::Operation > operation = m_factory->create();
+         auto operation = m_factory->create();
          int result( 0 );
          for ( size_t c( 0 ); c < count; ++c )
          {  result += operation->operate( a, b ); }
