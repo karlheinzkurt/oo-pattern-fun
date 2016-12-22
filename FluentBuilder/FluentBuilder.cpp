@@ -33,13 +33,11 @@ struct Element
       ,m_height( b.m_height )
    {}    
 
-   Element& operator=( Builder const& b )
-   {
-      m_length = b.m_length;
-      m_width = b.m_width; 
-      m_height = b.m_height;
-      return (*this);
-   }
+   Element() = delete;
+   Element(Element const&) = delete;
+   Element& operator=(Element const&) = delete;
+   Element(Element&&) = default;
+   Element& operator=(Element&&) = default;
 
    friend std::ostream& operator<<( std::ostream& os, Element const& e )
    {  return ( os << "Length: " << e.m_length << ", Width: " << e.m_width << ", Height: " << e.m_height ); }
