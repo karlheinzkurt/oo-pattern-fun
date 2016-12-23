@@ -1,11 +1,13 @@
 
-// we don't need to include std::string here.
+/** We don't need to include std::string here
+ *  even when we use it inside of the processor.
+ */
 
-namespace API
+namespace Concrete
 {
    struct Processor
    {
-      Processor();
+      Processor(char const* const text);
       ~Processor();
       
       Processor(Processor const&) = delete;

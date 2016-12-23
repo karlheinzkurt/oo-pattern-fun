@@ -10,42 +10,46 @@ namespace API
    {
       virtual ~Command() {}
       
-      virtual void execute() = 0;
+      virtual void execute(std::ostream&) = 0;
    };
 }
+
 namespace Concrete
 {
    struct ReadCommand : public API::Command
    {
-      void execute() override { std::cout << "read\n"; }
+      void execute(std::ostream& os) override { os << "read\n"; }
    };
 
    struct WriteCommand : public API::Command
    {
-      void execute() override { std::cout << "write\n"; }
+      void execute(std::ostream& os) override { os << "write\n"; }
    };
 
    struct ComplexCommand : public API::Command
    {
-      void execute() override
-      {
-         std::string userInput;
-         std::getline( std::cin, userInput );
-         boost::to_upper( userInput );
-         std::cout << userInput;
-      }
+      ComplexCommand(std::string text) : m_text(text) { boost::to_upper( m_text ); }
+      
+      void execute(std::ostream& os) override { os << m_text << '\n'; }
+      
+   private:
+      std::string m_text;
    };
 }
 
 int main( int argc, char** argv )
 {
-   std::array< std::unique_ptr< API::Command >, 4 > const commands = 
+   std::array<std::unique_ptr< API::Command >, 5> const commands = 
    { 
        std::make_unique< Concrete::ReadCommand >()
       ,std::make_unique< Concrete::WriteCommand >()
-      ,std::make_unique< Concrete::ComplexCommand >()
+      ,std::make_unique< Concrete::ComplexCommand >("blub")
+      ,std::make_unique< Concrete::ReadCommand >()
       ,std::make_unique< Concrete::ReadCommand >()
    };
-
-   for ( auto& command : commands ) { command->execute(); }; ///< Execute all in unified way
+ 
+   /** Somewhere else, nobody knows about concrete commands,
+    *  they look all the same.
+    */
+   for ( auto& command : commands ) { command->execute(std::cout); }; ///< Execute all in unified way
 }

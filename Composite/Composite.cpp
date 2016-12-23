@@ -33,41 +33,49 @@ namespace Concrete
 
    struct GraphicComposite : public API::Graphic
    {   
+      typedef std::vector<std::unique_ptr<API::Graphic>> GraphicCollectionType;
+      
       std::string toString() const override
       {  
          std::ostringstream os;
-         for ( auto const& c : m_childs ) { os << c->toString(); }
+         for ( auto const& c : m_childs ) { os << "   " << c->toString(); }
          return os.str();
       }
 
-      void add(std::unique_ptr<API::Graphic> g)
+      void add(GraphicCollectionType::value_type g)
       {  m_childs.emplace_back(std::move(g)); }
 
       void remove(API::Graphic const& g)
       {  
-         std::remove_if(m_childs.begin(), m_childs.end(), [&](GraphicType::value_type const& c)
+         std::remove_if(m_childs.begin(), m_childs.end(), [&](GraphicCollectionType::value_type const& c)
          {  return *c == g; });  
       }
       
    private:
-      typedef std::vector<std::unique_ptr<API::Graphic>> GraphicType;
-      GraphicType m_childs;
+      GraphicCollectionType m_childs;
    };
 }
 
 int main( int argc, char** argv )
 {
-   auto container(std::make_unique<Concrete::GraphicComposite>());
-   for ( unsigned int i = 0; i < 3; ++i )
+   std::unique_ptr<API::Graphic> graphics, anotherGraphics;
    {
-      auto subContainer(std::make_unique<Concrete::GraphicComposite>());
-      subContainer->add(std::make_unique<Concrete::Rectangle>());
-      subContainer->add(std::make_unique<Concrete::Ellipse>());
-      container->add(std::move(subContainer));
+      auto container(std::make_unique<Concrete::GraphicComposite>());
+      for ( unsigned int i = 0; i < 3; ++i )
+      {
+         auto subContainer(std::make_unique<Concrete::GraphicComposite>());
+         subContainer->add(std::make_unique<Concrete::Rectangle>());
+         subContainer->add(std::make_unique<Concrete::Ellipse>());
+         container->add(std::move(subContainer));
+      }
+      container->add(std::make_unique<Concrete::Ellipse>());   
+      container->add(std::make_unique<Concrete::Rectangle>());
+      graphics = std::move(container);
    }
-   container->add(std::make_unique<Concrete::Ellipse>());   
-   container->add(std::make_unique<Concrete::Rectangle>());   
-
-   std::cout << container->toString();
-   return 0;
+   {
+      anotherGraphics = std::make_unique<Concrete::Rectangle>();
+   }
+   
+   std::cout << graphics->toString() 
+             << anotherGraphics->toString();
 }

@@ -1,43 +1,20 @@
 
+#include "Server.h"
+
 #include <iostream>
-#include <memory>
-#include <mutex>
+#include <thread>
+#include <vector>
 
-struct Server
-{
-      static Server& getInstance();
-   
-      void run();
-
-   private:
-      Server() = default;
-      Server(Server&&) = default;
-      Server& operator=(Server&&) = default;
-      
-      Server(Server const&) = delete;
-      Server& operator=(Server const&) = delete;
-};
-
-namespace
-{
-   std::unique_ptr<Server> instance;
-   std::once_flag onceFlag;
-}
-
-Server& Server::getInstance() 
-{  
-   std::call_once(onceFlag, []
-   {
-      instance.reset(new Server);
-   });
-   return *instance.get();
-}
-
-void Server::run()
-{  std::cout << "Server" << std::endl; }
-   
 int main( int argc, char** argv )
 {   
-   auto& server(Server::getInstance());
-   server.run();
+   /** Let's run it by 100 threads in parallel
+    */
+    
+   std::vector<std::thread> threads;
+   for (size_t t(0); t < 100; ++t)
+   {
+      threads.emplace_back(std::thread([t]
+      {  Concrete::Server::getInstance().run(std::cout, t); }));
+   }
+   for (auto& t : threads) { t.join(); }
 }

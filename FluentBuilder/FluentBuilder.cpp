@@ -17,7 +17,11 @@ struct Element
       {  m_height = h; return *this; }
 
       Element build() const
-      {  return Element( *this ); } 
+      {
+         /** Add validation checks here
+          */
+         return Element( *this ); 
+      } 
 
    private:
       int m_length;
@@ -50,6 +54,8 @@ private:
 
 int main( int argc, char** argv )
 {
+   /** Don't care about the order of the arguments 
+    */
    {
       auto element(Element::Builder().withLength( 20 ).withWidth( 30 ).build());
       std::cout << element << '\n';

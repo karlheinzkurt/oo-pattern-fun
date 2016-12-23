@@ -67,6 +67,5 @@ int main( int argc, char** argv )
    std::cout << *text << '\n';
    auto decoratedText(std::make_unique<PipeDecorator>(std::make_unique<MinusDecorator>(std::make_unique<PipeDecorator>(std::move(text)))));
    std::cout << *decoratedText << '\n';
-   return 0;
 }
 
