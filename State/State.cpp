@@ -1,87 +1,79 @@
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <map>
+#include <memory>
+#include <cctype>
 
 namespace API
 {
-   class State
-   {  public:
+   struct State
+   {
       virtual ~State() {}
-      virtual void execute( char const ) = 0;
+      
+      virtual char execute( char const ) = 0;
    };
 }
 
 namespace Concrete
 {
-   class NormalState : public API::State
-   {  public:
-      void execute( char const ch )
-      {  std::cout << ch; }
-
-      static char key()
-      {  static char k( '.' ); return k; }
-   };
-
-   class LowerState : public API::State
-   {  public:
-      void execute( char const ch )
-      {  std::cout << (char)( ch - ( ( ch >= 'A' && ch <= 'Z' ) ? ( 'A' - 'a' ) : 0 ) ); }
-
-      static char key()
-      {  static char k( '-' ); return k; }
-   };
-
-   class UpperState : public API::State
-   {  public:
-      void execute( char const ch )
-      {  std::cout << (char)( ch + ( ( ch >= 'a' && ch <= 'z' ) ? ( 'A' - 'a' ) : 0 ) ); }
-
-      static char key()
-      {  static char k( '+' ); return k; }
-   };
-
-   class Processor
+   struct NormalState : public API::State
    {
-      typedef std::map< char const, API::State* > TStates;
+      virtual char execute( char const ch ) override
+      {  return ch; }
 
-      public:
+      static char key() { return '.'; }
+   };
+
+   struct LowerState : public API::State
+   {
+      virtual char execute( char const ch ) override
+      {  return std::tolower(ch); }
+
+      static char key() { return '-'; }
+   };
+
+   struct UpperState : public API::State
+   {
+      virtual char execute( char const ch ) override
+      {  return std::toupper(ch); }
+
+      static char key() { return '+'; }
+   };
+
+   struct Processor
+   {
+      typedef std::map<char const, std::unique_ptr<API::State>> StateMapType;
+
       Processor()
       {
-         m_states[ UpperState::key() ] = new UpperState;
-         m_states[ LowerState::key() ] = new LowerState;
-         m_states[ NormalState::key() ] = new NormalState;
-         m_state = m_states[ '.' ]; 
+         m_states.emplace(StateMapType::value_type(UpperState::key(), std::make_unique<UpperState>()));
+         m_states.emplace(StateMapType::value_type(LowerState::key(), std::make_unique<LowerState>()));
+         m_states.emplace(StateMapType::value_type(NormalState::key(), std::make_unique<NormalState>()));
+         m_state = m_states.at(NormalState::key()).get(); 
       }
 
-      ~Processor()
+      std::string process(std::string const& phrase)
       {
-         TStates::iterator const se( m_states.end() );
-         for ( TStates::iterator sc( m_states.begin() ); sc != se; ++sc )
-         {  delete (*sc).second; }
-      }
-
-      void process( std::string const& phrase ) 
-      {
-         std::string::const_iterator const se( phrase.end() );
-         for ( std::string::const_iterator sb( phrase.begin() ); sb != se; ++sb )
+         std::ostringstream result;
+         for (auto const character : phrase)
          {
-            char const& ch( *sb );
-            switch ( ch )
+            switch (character)
             {
                case '+': 
                case '-':
                case '.':
-               m_state = m_states[ ch ];  continue;
-               default:                   break;
+               m_state = m_states.at(character).get(); continue;
+               default: break;
             }
-
-            m_state->execute( ch );
+            result << m_state->execute(character);
          }
+         return result.str();
       }
 
-      private:
-      API::State*  m_state;
-      TStates      m_states;   
+   private:
+      StateMapType m_states;   
+      API::State* m_state;
    };
 }
 
@@ -91,6 +83,5 @@ int main( int argc, char** argv )
 
    std::string line;
    while ( std::getline( std::cin, line ) )
-   {  processor.process( line ); }
+   {  std::cout << processor.process( line ) << '\n'; }
 }
-
