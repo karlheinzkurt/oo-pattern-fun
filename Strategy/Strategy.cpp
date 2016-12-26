@@ -1,75 +1,105 @@
 #include <iostream>
+#include <memory>
+#include <array>
 
 namespace API
 {
-   class Strategy
+   struct Flyable
    {
-      public:
-      virtual ~Strategy() {}
-      virtual void Do() = 0;
+      virtual ~Flyable() {}
+      
+      virtual void fly() = 0;
+   };
+   
+   struct Drawable
+   {
+      virtual ~Drawable() {}
+
+      virtual void draw() = 0;
+   };
+   
+   struct Duck : public API::Flyable, public API::Drawable {};
+}
+
+namespace Helper
+{
+   struct DuckBase : public API::Duck ///< Helper only
+   {
+   protected:
+      DuckBase(std::unique_ptr<API::Flyable> flyingStrategy, std::unique_ptr<API::Drawable> drawingStrategy) : 
+          m_flyingStrategy(std::move(flyingStrategy)) 
+         ,m_drawingStrategy(std::move(drawingStrategy))
+      {}
+      
+   public:
+      virtual void fly() override { m_flyingStrategy->fly(); } 
+      virtual void draw() override { m_drawingStrategy->draw(); }
+      
+   private:
+      std::unique_ptr<API::Flyable> m_flyingStrategy;
+      std::unique_ptr<API::Drawable> m_drawingStrategy;
+   };
+   
+   class NonFlyingStrategy : public API::Flyable
+   {  
+      virtual void fly() override { std::cout << "cannot fly" << std::endl; }
    };
 
-   template < class CONCRETE_STRATEGY >
-   class WithStrategy
-   {
-      public: 
-      WithStrategy( Strategy* strategy ) : m_strategy( strategy ) {}
-      ~WithStrategy() { delete m_strategy; }
-
-      protected:
-      void Do() { m_strategy->Do(); }
-
-      private:
-      Strategy* m_strategy;
+   class NormalFlyingStrategy : public API::Flyable
+   {  
+      virtual void fly() override { std::cout << "just fly" << std::endl; } 
    };
+
+   class ComicDrawingStrategy : public API::Drawable
+   {  
+      virtual void draw() override { std::cout << "draw comic like" << std::endl; } 
+   };
+
+   class RealisticDrawingStrategy : public API::Drawable
+   {  
+      virtual void draw() override { std::cout << "draw picture" << std::endl; } 
+   };  
 }
 
 namespace Concrete
 {
-   class FlyingStrategy : public API::Strategy
-   { public: void fly() { Do(); }; };
-
-   class ShowingStrategy : public API::Strategy
-   { public: void show() { Do(); }; };
-
-   class NonFlyingStrategy : public FlyingStrategy
-   {  void Do() { std::cout << "non flying" << std::endl; } };
-
-   class NormalFlyingStrategy : public FlyingStrategy
-   {  void Do() { std::cout << "normal flying" << std::endl; } };
-
-   class ComicShowingStrategy : public ShowingStrategy
-   {  void Do() { std::cout << "artificial showing" << std::endl; } };
-
-   class RealisticShowingStrategy : public ShowingStrategy
-   {  void Do() { std::cout << "show image" << std::endl; } };
-
-   class Duck : 
-      public API::WithStrategy< FlyingStrategy >, 
-      public API::WithStrategy< ShowingStrategy >
-   {
-      public: 
-      Duck( API::Strategy* flyingStrategy, API::Strategy* showingStrategy ) : 
-          API::WithStrategy< FlyingStrategy >( flyingStrategy ) 
-         ,API::WithStrategy< ShowingStrategy >( showingStrategy )
+   struct MallardDuck : public Helper::DuckBase ///< Can fly and looks realistic
+   {  
+      MallardDuck() : Helper::DuckBase(
+          std::make_unique<Helper::NormalFlyingStrategy>()
+         ,std::make_unique<Helper::RealisticDrawingStrategy>()) 
       {}
-      void fly()  { WithStrategy< FlyingStrategy >::Do(); } 
-      void show() { WithStrategy< ShowingStrategy >::Do(); }
    };
-
-   class RubberDuck : public Duck
-   { public: RubberDuck() : Duck( new NonFlyingStrategy, new ComicShowingStrategy ) {} };
    
-   class MallardDuck : public Duck
-   { public: MallardDuck() : Duck( new NormalFlyingStrategy, new RealisticShowingStrategy ) {} };
+   struct PekinDuck : public Helper::DuckBase ///< Cannot fly and looks realistic
+   {  
+      PekinDuck() : Helper::DuckBase(
+          std::make_unique<Helper::NonFlyingStrategy>()
+         ,std::make_unique<Helper::RealisticDrawingStrategy>()) 
+      {}
+   };
+   
+   struct RubberDuck : public Helper::DuckBase ///< Cannot fly and does not look realistic
+   {  
+      RubberDuck() : Helper::DuckBase(
+          std::make_unique<Helper::NonFlyingStrategy>()
+         ,std::make_unique<Helper::ComicDrawingStrategy>()) 
+      {}
+   };
 }
    
 int main ( int, char** )
 {
-   Concrete::Duck* ducks[2] = { new Concrete::RubberDuck, new Concrete::MallardDuck };
-   ducks[0]->fly(), ducks[0]->show();
-   ducks[1]->fly(), ducks[1]->show();
-   delete ducks[0], delete ducks[1];
-   return 0;
+   std::array<std::unique_ptr<API::Duck>, 3> duckGame = 
+   { 
+       std::make_unique<Concrete::RubberDuck>()
+      ,std::make_unique<Concrete::MallardDuck>() 
+      ,std::make_unique<Concrete::PekinDuck>() 
+   };
+   
+   for (auto& duck : duckGame) ///< Think as we would play the duck game
+   {
+      duck->fly();
+      duck->draw();
+   }
 }
-
