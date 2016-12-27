@@ -64,6 +64,9 @@ namespace Concrete
 
 int main( int argc, char** argv )
 {
+   /** To be able to control here what kind of object is 
+       created inside some object.
+    */
    {
       Concrete::ComplexCalculator calculator( std::make_unique< Concrete::MultiplyFactory >() );
       std::cout << calculator.calculate( 10, 5, 23 ) << "\n";

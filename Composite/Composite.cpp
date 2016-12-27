@@ -58,6 +58,9 @@ namespace Concrete
 
 int main( int argc, char** argv )
 {
+   /** Both have the same type but the first
+       contains sub graphic elements.
+    */
    std::unique_ptr<API::Graphic> graphics, anotherGraphics;
    {
       auto container(std::make_unique<Concrete::GraphicComposite>());

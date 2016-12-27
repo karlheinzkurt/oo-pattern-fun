@@ -20,21 +20,21 @@ namespace API
 
       virtual ~Processor() {}
 
-      void Init()
+      void init()
       {
-         if (!CheckCallSet(State::Premature, [this]{ DoInit(); }, State::Initialized))
+         if (!checkCallSet(State::Premature, [this]{ doInit(); }, State::Initialized))
          {  throw std::logic_error("Init has to be called first"); }
       }
 
-      void Configure(std::string argument)
+      void configure(std::string argument)
       {
-         if (!CheckCallSet(State::Initialized, [this, argument]{ DoConfigure(argument); }, State::Configured))
+         if (!checkCallSet(State::Initialized, [this, argument]{ doConfigure(argument); }, State::Configured))
          {  throw std::logic_error("Configure has to be called second"); }
       }
 
-      void Process()
+      void process()
       {
-         if (!CheckCallSet(State::Configured, [this]{ DoProcess(); }, State::Processing))
+         if (!checkCallSet(State::Configured, [this]{ doProcess(); }, State::Processing))
          {  throw std::logic_error("Process has to be called third"); }
       }
 
@@ -42,7 +42,7 @@ namespace API
       /** Avoid duplication
       */
       template <typename FunctionT>
-      bool CheckCallSet(State stateToCheck, FunctionT&& function, State stateToSet)
+      bool checkCallSet(State stateToCheck, FunctionT&& function, State stateToSet)
       {
          if ( m_state != stateToCheck )
          {  return false; }
@@ -53,9 +53,9 @@ namespace API
          return true;
       }
    
-      virtual void DoInit() = 0;
-      virtual void DoConfigure(std::string) = 0;
-      virtual void DoProcess() = 0;
+      virtual void doInit() = 0;
+      virtual void doConfigure(std::string) = 0;
+      virtual void doProcess() = 0;
 
    private:
       State m_state;
@@ -69,13 +69,13 @@ namespace Concrete
     */
    struct Processor : API::Processor
    {
-      virtual void DoInit() override
+      virtual void doInit() override
       {  std::cout << "Initializing\n"; }
 
-      virtual void DoConfigure(std::string argument) override
+      virtual void doConfigure(std::string argument) override
       {  std::cout << "Configuring: " << argument << '\n'; }
 
-      virtual void DoProcess() override
+      virtual void doProcess() override
       {  std::cout << "Processing\n"; }
    };   
 } 
@@ -84,10 +84,10 @@ int main( int argc, char** argv )
 {
    try
    {
-      auto processor = std::make_unique<Concrete::Processor>();
-      processor->Init();
-      processor->Configure("bla");
-      processor->Process();
+      auto processor(std::make_unique<Concrete::Processor>());
+      processor->init();
+      processor->configure("bla");
+      processor->process();
    }
    catch (std::exception const& e )
    {  std::cout << "Error: " << e.what() << std::endl; }

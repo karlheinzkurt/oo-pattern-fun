@@ -58,7 +58,7 @@ namespace Concrete
          std::ostringstream result;
          for (auto const character : phrase)
          {
-            switch (character)
+            switch (character) ///< This characters will switch the state
             {
                case '+': 
                case '-':

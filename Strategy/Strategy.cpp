@@ -21,9 +21,9 @@ namespace API
    struct Duck : public API::Flyable, public API::Drawable {};
 }
 
-namespace Helper
+namespace Detail
 {
-   struct DuckBase : public API::Duck ///< Helper only
+   struct DuckBase : public API::Duck ///< Helper to avoid duplications
    {
    protected:
       DuckBase(std::unique_ptr<API::Flyable> flyingStrategy, std::unique_ptr<API::Drawable> drawingStrategy) : 
@@ -63,27 +63,27 @@ namespace Helper
 
 namespace Concrete
 {
-   struct MallardDuck : public Helper::DuckBase ///< Can fly and looks realistic
+   struct MallardDuck : public Detail::DuckBase ///< Can fly and looks realistic
    {  
-      MallardDuck() : Helper::DuckBase(
-          std::make_unique<Helper::NormalFlyingStrategy>()
-         ,std::make_unique<Helper::RealisticDrawingStrategy>()) 
+      MallardDuck() : Detail::DuckBase(
+          std::make_unique<Detail::NormalFlyingStrategy>()
+         ,std::make_unique<Detail::RealisticDrawingStrategy>()) 
       {}
    };
    
-   struct PekinDuck : public Helper::DuckBase ///< Cannot fly and looks realistic
+   struct PekinDuck : public Detail::DuckBase ///< Cannot fly and looks realistic
    {  
-      PekinDuck() : Helper::DuckBase(
-          std::make_unique<Helper::NonFlyingStrategy>()
-         ,std::make_unique<Helper::RealisticDrawingStrategy>()) 
+      PekinDuck() : Detail::DuckBase(
+          std::make_unique<Detail::NonFlyingStrategy>()
+         ,std::make_unique<Detail::RealisticDrawingStrategy>()) 
       {}
    };
    
-   struct RubberDuck : public Helper::DuckBase ///< Cannot fly and does not look realistic
+   struct RubberDuck : public Detail::DuckBase ///< Cannot fly and does not look realistic
    {  
-      RubberDuck() : Helper::DuckBase(
-          std::make_unique<Helper::NonFlyingStrategy>()
-         ,std::make_unique<Helper::ComicDrawingStrategy>()) 
+      RubberDuck() : Detail::DuckBase(
+          std::make_unique<Detail::NonFlyingStrategy>()
+         ,std::make_unique<Detail::ComicDrawingStrategy>()) 
       {}
    };
 }
