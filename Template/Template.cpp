@@ -1,86 +1,94 @@
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 
 namespace API
 {
-   class Processor
+   /** Public interface it non-virtual
+    */
+   struct Processor
    {
-      private:
-      enum eSTATE
-      {  eSTATE_PREMATURE = 0x1, eSTATE_INITIALIZED = 0x2, eSTATE_CONFIGURED = 0x4, eSTATE_PROCESSING = 0x8 };
+      enum class State
+      {
+          Premature
+         ,Initialized
+         ,Configured
+         ,Processing
+      };
 
-      public:
-      Processor() : m_State( eSTATE_PREMATURE ) {}
+      Processor() : m_state(State::Premature) {}
 
       virtual ~Processor() {}
 
       void Init()
       {
-         if ( m_State != eSTATE_PREMATURE ) 
-         {  throw "Double initialization"; }
-         
-         DoInit();
-
-         m_State = eSTATE_INITIALIZED;
+         if (!CheckCallSet(State::Premature, [this]{ DoInit(); }, State::Initialized))
+         {  throw std::logic_error("Init has to be called first"); }
       }
 
-      void Configure()
+      void Configure(std::string argument)
       {
-         if ( m_State != eSTATE_INITIALIZED ) 
-         {  throw "Init has to be called first"; }
-         
-         DoConfigure();
-
-         m_State = eSTATE_CONFIGURED;
+         if (!CheckCallSet(State::Initialized, [this, argument]{ DoConfigure(argument); }, State::Configured))
+         {  throw std::logic_error("Configure has to be called second"); }
       }
 
       void Process()
       {
-         if ( m_State != eSTATE_CONFIGURED )
-         {  throw "Init and configure has to be called at first"; }
-
-         m_State = eSTATE_PROCESSING;
-
-         DoProcess();
+         if (!CheckCallSet(State::Configured, [this]{ DoProcess(); }, State::Processing))
+         {  throw std::logic_error("Process has to be called third"); }
       }
 
-      private:
+   private:
+      /** Avoid duplication
+      */
+      template <typename FunctionT>
+      bool CheckCallSet(State stateToCheck, FunctionT&& function, State stateToSet)
+      {
+         if ( m_state != stateToCheck )
+         {  return false; }
+         
+         function();
+         
+         m_state = stateToSet;
+         return true;
+      }
+   
       virtual void DoInit() = 0;
-      virtual void DoConfigure() = 0;
+      virtual void DoConfigure(std::string) = 0;
       virtual void DoProcess() = 0;
 
-      private:
-      eSTATE m_State;
+   private:
+      State m_state;
    };
 } // API
 
 namespace Concrete
 {
-   class Processor : public API::Processor
+   /** Customization of Init/Configure/Process is possible,
+       but outer frame is fixed in base class and cannot be misused.
+    */
+   struct Processor : API::Processor
    {
-      private: 
-      void DoInit()
-      {  std::cout << "initializing" << std::endl; }
+      virtual void DoInit() override
+      {  std::cout << "Initializing\n"; }
 
-      void DoConfigure()
-      {  std::cout << "configuring" << std::endl; }
+      virtual void DoConfigure(std::string argument) override
+      {  std::cout << "Configuring: " << argument << '\n'; }
 
-      void DoProcess()
-      {  std::cout << "processing" << std::endl; }
+      virtual void DoProcess() override
+      {  std::cout << "Processing\n"; }
    };   
-} // Concrete
+} 
 
 int main( int argc, char** argv )
 {
    try
    {
-      API::Processor* p = new Concrete::Processor();
-      p->Init();
-      p->Configure();
-      p->Process();
+      auto processor = std::make_unique<Concrete::Processor>();
+      processor->Init();
+      processor->Configure("bla");
+      processor->Process();
    }
-   catch ( const char* c )
-   {  std::cout << "Error: " << c << std::endl; }
-
-   return 0;
+   catch (std::exception const& e )
+   {  std::cout << "Error: " << e.what() << std::endl; }
 }
-
