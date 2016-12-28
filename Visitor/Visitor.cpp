@@ -1,109 +1,201 @@
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <exception>
 #include <memory>
 
 namespace API
 {
-   struct VisitorBase
+   /** We do need this forward declarations :-(,
+       because the visitor has to know this elements.
+    */
+   struct Accomodation;
+   struct Traveling;
+   struct Fun;
+   
+   /** Abstract visitor has to be extended 
+       when elements are increasing :-(
+    */
+   struct Visitor
    {
-      virtual ~VisitorBase() {}
-      
+      virtual ~Visitor() {}      
+      virtual void visit(Accomodation&) = 0;
+      virtual void visit(Traveling&) = 0;
+      virtual void visit(Fun&) = 0;
       virtual std::string toString() const = 0;
    };
+   
+   std::ostream& operator<<(std::ostream& os, Visitor& v)
+   {  return os << v.toString(); }
 
-   template < class ElementType >
-   struct Visitor : virtual public VisitorBase
+   struct Element
    {
-      virtual ~Visitor() {}
-      
-      virtual void visit( ElementType& ) = 0;
-   };   
-
-   struct ElementBase
-   {
-      virtual ~ElementBase() {}
-      
-      virtual void accept( VisitorBase& ) = 0;
-   };
-
-   template < class ElementType >
-   struct Element : public ElementBase
-   {
-      virtual ~Element() {}
-      
-      virtual void accept( VisitorBase& v ) override
-      {         
-         auto& _v( dynamic_cast< Visitor< ElementType >& >( v ) );
-         auto& _e( dynamic_cast< ElementType& >( *this ) );
-         _v.visit( _e );
-      }
+      virtual ~Element() {}    
+      virtual void accept(Visitor&) = 0;
    };
    
-   std::ostream& operator<<( std::ostream& os, VisitorBase const& v )
-   {  return os << v.toString(); }
+   struct Accomodation
+   { 
+      virtual int getPrice() const = 0;
+      virtual int getStars() const = 0;
+   };
+
+   struct Traveling
+   {  
+      virtual int getPrice() const = 0;
+      virtual int getDistance() const = 0;
+      virtual int getClass() const = 0;
+   };
+
+   struct Fun
+   {  
+      virtual int getPrice() const = 0;
+      virtual int getRelaxFactor() const = 0;
+   };   
 }
 
 namespace Concrete
 {
-   struct Accomodation : public API::Element< Accomodation >
-   { 
-      int getPrice() const { return 180; }
-   };
-
-   struct Traveling : public API::Element< Traveling >
-   {  
-      int getPrice() const { return 250; } 
-   };
-
-   struct AdditionalCosts : public API::Element< AdditionalCosts >
-   {  
-      int getPrice() const { return 65; }
-   };
-
-   struct PriceVisitor : public API::Visitor< Accomodation >, public API::Visitor< Traveling >, public API::Visitor< AdditionalCosts >
+   struct Cruise : API::Element, API::Accomodation, API::Traveling, API::Fun
    {
-      PriceVisitor() : m_price( 0 ) {}
+      virtual void accept(API::Visitor& v) override 
+      { 
+         v.visit(static_cast<API::Accomodation&>(*this));
+         v.visit(static_cast<API::Traveling&>(*this));
+         v.visit(static_cast<API::Fun&>(*this));
+      } 
+      virtual int getPrice() const { return 2500 / 3; } ///< Hmm, gets called 3 times, this is stupid
+      virtual int getStars() const { return 4; }
+      virtual int getDistance() const { return 1200; }
+      virtual int getClass() const { return 2; }
+      virtual int getRelaxFactor() const { return 3; }
+   };
+   
+   struct Flight : API::Element, API::Traveling
+   {
+      Flight(int _class) : m_class(_class) {}
+      virtual void accept(API::Visitor& v) override { v.visit(*this); } 
+      virtual int getPrice() const { return 1000; }
+      virtual int getClass() const { return m_class; }
+      virtual int getDistance() const { return 320; }
+      
+   private:
+      int m_class;
+   };
+   
+   struct Hotel : API::Element, API::Accomodation
+   {
+      virtual void accept(API::Visitor& v) override { v.visit(*this); } 
+      virtual int getPrice() const { return 210; }
+      virtual int getStars() const { return 3; }
+   };
+   
+   struct Hiking : API::Element, API::Fun
+   {
+      virtual void accept(API::Visitor& v) override { v.visit(*this); } 
+      virtual int getPrice() const { return 0; }
+      virtual int getRelaxFactor() const { return 5; }
+   };
+   
+   struct Price : public API::Visitor
+   {
+      Price() : m_price(0) {}
 
-      void visit( Concrete::Accomodation& a ) override
+      virtual void visit(API::Accomodation& a) override
       {  m_price += a.getPrice(); }
 
-      void visit( Concrete::Traveling& t ) override
-      {  m_price += t.getPrice() * 2 /* to and back */; }
+      virtual void visit(API::Traveling& t) override
+      {  m_price += t.getPrice() * 2 /* there and back */; }
 
-      void visit( Concrete::AdditionalCosts& ac ) override
-      {  m_price += ac.getPrice(); }
+      virtual void visit(API::Fun& f) override
+      {  m_price += f.getPrice(); }
 
-      std::string toString() const override
-      {  return std::string("Price: ") + std::to_string(m_price); }
+      virtual std::string toString() const override
+      {  return std::to_string(m_price); }
       
    private:
       int m_price;
    };
    
-   /** \todo Add another visitor for something different than price
-    * */
+   struct Comfort : public API::Visitor
+   {
+      Comfort() : m_comfort(1.) {}
+
+      virtual void visit(API::Accomodation& a) override
+      {  m_comfort *= 1. + a.getStars(); }
+
+      virtual void visit(API::Traveling& t) override
+      {  m_comfort *= 1. / t.getClass(); }
+
+      virtual void visit(API::Fun& f) override
+      {  /* does nothing */ }
+
+      virtual std::string toString() const override
+      {  return std::to_string(m_comfort); }
+      
+   private:
+      double m_comfort;
+   };
+   
+   struct Relaxation : public API::Visitor
+   {
+      Relaxation() : m_relaxation(1.) {}
+      
+      virtual void visit(API::Accomodation& a) override
+      {  m_relaxation *= 1. + a.getStars(); }
+
+      virtual void visit(API::Traveling& t) override
+      {  m_relaxation *= 1. / ((t.getDistance() / 100.) * t.getClass()); }
+
+      virtual void visit(API::Fun& f) override
+      {  m_relaxation *= f.getRelaxFactor(); }
+      
+      virtual std::string toString() const override
+      {  return std::to_string(m_relaxation); }
+      
+   private:
+      double m_relaxation;
+   };
+
+   struct Holiday ///< Has nothing to do with visitor
+   {
+      Holiday(std::initializer_list<std::reference_wrapper<API::Element>> elements)
+      {
+         Concrete::Price price;
+         Concrete::Comfort comfort;
+         Concrete::Relaxation relaxation;
+
+         for (auto& element : elements)
+         {
+            element.get().accept(price);
+            element.get().accept(comfort);
+            element.get().accept(relaxation);
+         }
+         
+         std::ostringstream os;
+         os << "Price: " << price << ", Comfort: " << comfort << ", Relaxation: " << relaxation;
+         m_string = os.str();      
+      }
+
+      std::string toString() const
+      {  return m_string; }
+      
+   private:
+      std::string m_string;
+   };
 }
 
 int main( int argc, char** argv )
 {
-   std::vector<std::unique_ptr<API::ElementBase>> elements;
-   elements.emplace_back(std::make_unique<Concrete::Accomodation>());
-   elements.emplace_back(std::make_unique<Concrete::Traveling>());
-   elements.emplace_back(std::make_unique<Concrete::AdditionalCosts>());
-   
-   std::vector<std::unique_ptr<API::VisitorBase>> visitors;
-   visitors.emplace_back(std::make_unique<Concrete::PriceVisitor>());
-
-   for ( auto& element : elements )
-   {  
-      for ( auto const& visitor : visitors )
-      {  element->accept( *visitor ); }
-   } 
-
-   for ( auto const& visitor : visitors )
-   {  std::cout << *visitor << '\n'; }
-   
-   return 0;
+   {
+      Concrete::Flight flightTo(3), flightBack(3);
+      Concrete::Hotel hotel;
+      Concrete::Hiking hiking;
+      std::cout << "Your holiday: " << Concrete::Holiday({flightTo, flightBack, hotel, hiking}).toString() << '\n';
+   }
+   {
+      Concrete::Cruise cruise;
+      Concrete::Flight flightBack(2);
+      std::cout << "Your holiday: " << Concrete::Holiday({cruise, flightBack}).toString() << '\n';
+   }
 }
