@@ -1,6 +1,6 @@
 #!/bin/bash
 DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-BUILD_DIR=$DIR/build
+BUILD_DIR=$DIR/build/CodeLite
 SOURCE_DIR=$DIR
 
 mkdir -p $BUILD_DIR
