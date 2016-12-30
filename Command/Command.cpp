@@ -1,8 +1,9 @@
 #include <iostream>
 #include <array>
 #include <memory>
-
-#include <boost/algorithm/string.hpp>
+#include <algorithm>
+#include <cctype>
+#include <string>
 
 namespace API
 {
@@ -28,7 +29,11 @@ namespace Concrete
 
    struct ComplexCommand : public API::Command
    {
-      ComplexCommand(std::string text) : m_text(text) { boost::to_upper( m_text ); }
+      ComplexCommand(std::string text) : m_text() 
+	  { 
+		  std::transform(text.begin(), text.end(), std::back_inserter(m_text), [](std::string::value_type c)
+		  {  return std::toupper(c); });
+	  }
       
       void execute(std::ostream& os) override { os << m_text << '\n'; }
       
