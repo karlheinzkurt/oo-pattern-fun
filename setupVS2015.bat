@@ -7,7 +7,7 @@ md "%BUILD_DIR%"
 pushd "%BUILD_DIR%"
    cmake ^
    -DCMAKE_BUILD_TYPE=Debug^
-   -G"Visual Studio 14 2015 Win64"^
+   -G"Visual Studio 14 2015"^
     "%SOURCE_DIR%"
 popd
 
