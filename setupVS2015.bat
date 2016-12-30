@@ -10,3 +10,5 @@ pushd "%BUILD_DIR%"
    -G"Visual Studio 14 2015 Win64"^
     "%SOURCE_DIR%"
 popd
+
+cmake --build "%BUILD_DIR%" --config Debug
