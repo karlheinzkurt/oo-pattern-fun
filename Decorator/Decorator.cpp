@@ -7,6 +7,8 @@ namespace API
    struct TextInterface
    {
       virtual ~TextInterface() {}
+      
+      virtual void setText(std::string text) = 0;
 
       virtual std::string toString() const = 0;
    };
@@ -21,7 +23,10 @@ namespace Concrete
    {
       TextObject( std::string const& text ) : m_text( text ) {}
 
-      std::string toString() const override
+      virtual void setText(std::string text) override
+      {  m_text = text; }
+
+      virtual std::string toString() const override
       {  return m_text; }
 
    private:
@@ -32,7 +37,10 @@ namespace Concrete
    {
       PipeDecorator( std::unique_ptr<API::TextInterface> decoratee ) : m_decoratee(std::move(decoratee)) {} 
 
-      std::string toString() const override
+      virtual void setText(std::string text) override
+      {  m_decoratee->setText(text); }
+
+      virtual std::string toString() const override
       {  
          std::ostringstream os;
          os << "|"  << m_decoratee->toString() << "|";
@@ -47,7 +55,10 @@ namespace Concrete
    {
       MinusDecorator( std::unique_ptr<API::TextInterface> decoratee ) : m_decoratee(std::move(decoratee)) {} 
 
-      std::string toString() const override
+      virtual void setText(std::string text) override
+      {  m_decoratee->setText(text); }
+
+      virtual std::string toString() const override
       {  
          std::ostringstream os;
          os << "-"  << m_decoratee->toString() << "-";
@@ -63,9 +74,17 @@ int main( int argc, char** argv )
 {
    using namespace Concrete;
 
-   auto text(std::make_unique<TextObject>("some text"));
+   /** Original object and decorated object have the same interface,
+    *  so we can re-assign the decorated object to the same pointer.
+    */
+
+   std::unique_ptr<API::TextInterface> text(new TextObject("some text"));
    std::cout << *text << '\n';
-   auto decoratedText(std::make_unique<PipeDecorator>(std::make_unique<MinusDecorator>(std::make_unique<PipeDecorator>(std::move(text)))));
-   std::cout << *decoratedText << '\n';
+   
+   text = std::make_unique<PipeDecorator>(std::make_unique<MinusDecorator>(std::make_unique<PipeDecorator>(std::move(text))));
+   std::cout << *text << '\n';
+   
+   text->setText("blub");
+   std::cout << *text << '\n';
 }
 
