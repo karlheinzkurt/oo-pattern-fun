@@ -1,78 +1,31 @@
-#include <iostream>
-#include <memory>
-
-namespace API
-{
-   struct Operation
-   {
-      virtual ~Operation() {}
-      
-      virtual int operate( int const a, int const b ) const = 0;       
-   };
-
-   struct OperationFactory
-   {  
-      virtual ~OperationFactory() {}
-      
-      virtual std::unique_ptr< Operation > create() = 0;
-   }; 
-}
+#include "AbstractFactory.h"
 
 namespace Concrete
 {
-   struct Add : public API::Operation
+   struct Add : public API::Operation ///< Concrete operation could be hidden
    {  
       virtual int operate( int const a, int const b ) const override
       {  return ( a + b ); }
    };
 
-   struct Multiply : public API::Operation
+   struct Multiply : public API::Operation ///< Concrete operation could be hidden
    {
       virtual int operate( int const a, int const b ) const override
       {  return ( a * b ); }
    };
 
-   struct AddFactory : public API::OperationFactory
+   std::unique_ptr< API::Operation > AddFactory::create()
+   {  return std::make_unique< Add >(); }
+
+   std::unique_ptr< API::Operation > MultiplyFactory::create()
+   {  return std::make_unique< Multiply >(); }
+
+   ComplexCalculator::ComplexCalculator( std::unique_ptr< API::OperationFactory > factory ) : m_factory( std::move( factory ) ) 
+   {}
+
+   int ComplexCalculator::calculate( int const a, int const b ) const
    {  
-      virtual std::unique_ptr< API::Operation > create() override
-      {  return std::make_unique< Add >(); }
-   };
-
-   struct MultiplyFactory : public API::OperationFactory
-   {  
-      virtual std::unique_ptr< API::Operation > create() override
-      {  return std::make_unique< Multiply >(); }
-   };
-
-   struct ComplexCalculator 
-   {  
-      ComplexCalculator( std::unique_ptr< API::OperationFactory > factory ) : m_factory( std::move( factory ) ) {}
-
-      int calculate( size_t const count, int const a, int const b ) const
-      {  
-         auto operation = m_factory->create();
-         int result( 0 );
-         for ( size_t c( 0 ); c < count; ++c )
-         {  result += operation->operate( a, b ); }
-         return result;
-      }      
-
-   private:
-      std::unique_ptr< API::OperationFactory > m_factory;
-   };
-}
-
-int main( int argc, char** argv )
-{
-   /** To be able to control here what kind of object is 
-       created inside some object.
-    */
-   {
-      Concrete::ComplexCalculator calculator( std::make_unique< Concrete::MultiplyFactory >() );
-      std::cout << calculator.calculate( 10, 5, 23 ) << "\n";
-   }
-   {
-      Concrete::ComplexCalculator calculator( std::make_unique< Concrete::AddFactory >() );
-      std::cout << calculator.calculate( 10, 5, 23 ) << "\n";
+      auto operation = m_factory->create();
+      return operation->operate( a, b );
    }
 }
