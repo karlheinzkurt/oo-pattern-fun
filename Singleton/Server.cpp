@@ -6,8 +6,8 @@
 
 namespace
 {
-   std::unique_ptr<Concrete::Server> instance;
-   std::atomic<size_t> instanceCount;
+   std::unique_ptr<Concrete::Server> s_instance;
+   std::atomic<size_t> s_instanceCount;
 }
 
 namespace Concrete
@@ -16,14 +16,14 @@ namespace Concrete
    {  
       static Concrete::Server* server = [&] // Should be fine since C++11 
       { 
-         instance.reset(new Server(instanceCount++));
-         return instance.get();
+         s_instance.reset(new Server(s_instanceCount++));
+         return s_instance.get();
       }();
       return *server;
    }
 
-   Server::Server(size_t instance) : m_instance(instance) {}
+   Server::Server(size_t instanceCount) : m_instanceCount(instanceCount) {}
 
    void Server::run(std::ostream& os, size_t id)
-   {  os << "Server " << m_instance << " is running " << id << '\n'; }
+   {  os << "Server instance " << m_instanceCount << " is running " << id << '\n'; }
 }

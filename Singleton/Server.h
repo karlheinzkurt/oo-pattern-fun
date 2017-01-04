@@ -11,7 +11,7 @@ namespace Concrete
       void run(std::ostream&, size_t id);
 
    private:
-      Server(size_t instance);
+      Server(size_t instanceCount);
       
       /** No copy or move, it's a highlander, there's exactly one and it's excactly here
        */
@@ -20,6 +20,6 @@ namespace Concrete
       Server(Server const&) = delete;
       Server& operator=(Server const&) = delete;
       
-      size_t m_instance;
+      size_t m_instanceCount;
    };
 }
