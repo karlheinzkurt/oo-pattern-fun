@@ -9,7 +9,7 @@ namespace API
 {
    struct State
    {
-      virtual ~State() {}
+      virtual ~State() = default;
       
       virtual char execute( char const ) = 0;
    };

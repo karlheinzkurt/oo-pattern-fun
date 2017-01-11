@@ -19,7 +19,7 @@ namespace API
 
       Processor() : m_state(State::Premature) {}
 
-      virtual ~Processor() {}
+      virtual ~Processor() = default;
 
       void init()
       {

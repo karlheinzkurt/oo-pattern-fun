@@ -9,7 +9,7 @@ namespace API
 {
    struct Command
    {
-      virtual ~Command() {}
+      virtual ~Command() = default;
       
       virtual void execute(std::ostream&) = 0;
    };

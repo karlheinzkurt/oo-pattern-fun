@@ -6,14 +6,14 @@ namespace API
 {
    struct Operation
    {
-      virtual ~Operation() {}
+      virtual ~Operation() = default;
       
       virtual int operate( int const a, int const b ) const = 0;       
    };
 
    struct OperationFactory
    {  
-      virtual ~OperationFactory() {}
+      virtual ~OperationFactory() = default;
       
       virtual std::unique_ptr< Operation > create() = 0;
    }; 

@@ -30,7 +30,7 @@ namespace API
 
    struct Element
    {
-      virtual ~Element() {}    
+      virtual ~Element() = default;  
       virtual void accept(Visitor&) = 0;
    };
    

@@ -2,11 +2,13 @@
 #include <memory>
 #include <sstream>
 
+/** \todo This are actually proxies, not decorators */
+
 namespace API
 {
    struct TextInterface
    {
-      virtual ~TextInterface() {}
+      virtual ~TextInterface() = default;
       
       virtual void setText(std::string text) = 0;
 

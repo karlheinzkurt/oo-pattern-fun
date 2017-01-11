@@ -6,14 +6,14 @@ namespace API
 {
    struct Flyable
    {
-      virtual ~Flyable() {}
+      virtual ~Flyable() = default;
       
       virtual void fly() = 0;
    };
    
    struct Drawable
    {
-      virtual ~Drawable() {}
+      virtual ~Drawable() = default;
 
       virtual void draw() = 0;
    };

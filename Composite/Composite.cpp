@@ -8,7 +8,7 @@ namespace API
 {
    struct Graphic
    {
-      virtual ~Graphic() {}
+      virtual ~Graphic() = default;
       
       virtual std::string toString() const = 0;  
    };
