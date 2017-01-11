@@ -30,10 +30,10 @@ namespace Concrete
    struct ComplexCommand : public API::Command
    {
       ComplexCommand(std::string text) : m_text() 
-	  { 
-		  std::transform(text.begin(), text.end(), std::back_inserter(m_text), [](std::string::value_type c)
-		  {  return std::toupper(c); });
-	  }
+     { 
+        std::transform(text.begin(), text.end(), std::back_inserter(m_text), [](std::string::value_type c)
+        {  return std::toupper(c); });
+     }
       
       void execute(std::ostream& os) override { os << m_text << '\n'; }
       
