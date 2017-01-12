@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <limits>
+#include <algorithm>
 
 namespace API
 {

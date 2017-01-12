@@ -17,7 +17,7 @@ struct ComplexTask : Concrete::Observable<int>
    {
       for (size_t i(0); i < m_numbers.size(); ++i)
       {  
-         notify(i * m_progressFactor);
+         notify(static_cast<int>(i * m_progressFactor));
          m_numbers[i] *= 2.;         
       }
    }

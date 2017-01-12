@@ -28,7 +28,7 @@ struct Element
       int m_width;
       int m_height;
 
-      friend class Element; ///< \todo Avoid friend here
+      friend struct Element; ///< \todo Avoid friend here
    };
 
    Element( Builder const& b ) :
