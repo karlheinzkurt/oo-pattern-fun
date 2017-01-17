@@ -3,12 +3,12 @@
 #include "Money.h"
 #include "AccessController.h"
 
-#include <boost/algorithm/string.hpp>
-
 #include <iostream>
 #include <sstream>
 #include <list>
 #include <stdexcept>
+#include <algorithm>
+#include <memory>
 
 namespace API
 {   
@@ -25,8 +25,11 @@ namespace API
    
    std::ostream& operator<<(std::ostream& os, Account const& account)
    {
-      return os   << "Balance: " << account.getBalance() << '\n'
-                  << boost::algorithm::join(account.getStatement(), "\n");
+      auto const statement(account.getStatement());
+      os << "Balance: " << account.getBalance() << '\n' << "Entry:" << '\n' << (statement.empty() ? "" : *statement.begin());
+      if (statement.size() > 1)
+      {  std::for_each(std::next(statement.begin()), statement.end(), [&](auto const& l){ os << '\n' << l; }); }
+      return os;
    }
 }
 
