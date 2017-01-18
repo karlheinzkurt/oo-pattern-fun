@@ -55,7 +55,7 @@ private:
    Currency m_currency;
 };
 
-Money& operator+(Money const& a, Money const& b)
+Money operator+(Money const& a, Money const& b)
 {  return (Money() += a) += b; }
 
 std::ostream& operator<<(std::ostream& os, Money const& money)
