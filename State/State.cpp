@@ -83,5 +83,8 @@ int main( int argc, char** argv )
 
    std::string line;
    while ( std::getline( std::cin, line ) )
-   {  std::cout << processor.process( line ) << '\n'; }
+   {  
+      if (line.empty()) { break; }
+      std::cout << processor.process( line ) << '\n'; 
+   }
 }
