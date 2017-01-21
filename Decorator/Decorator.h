@@ -19,7 +19,7 @@ namespace API
    
    std::ostream& operator<<( std::ostream& os, Text const& text )
    {  return os << text.toString(); }
-} // API
+}
 
 namespace Detail
 {
@@ -43,7 +43,7 @@ namespace Detail
 
 namespace Concrete
 {
-   struct Text : public API::Text
+   struct Text final : public API::Text
    {
       Text( std::string const& text ) : m_text( text ) {}
 
@@ -57,7 +57,7 @@ namespace Concrete
       std::string m_text;
    };
 
-   struct PipeDecorator : public API::Text
+   struct PipeDecorator final : public API::Text
    {
       PipeDecorator( std::unique_ptr<API::Text> decoratee ) : m_decoratee(std::move(decoratee)) {} 
 
@@ -78,7 +78,7 @@ namespace Concrete
       std::unique_ptr<API::Text> m_decoratee;
    };
    
-   struct BoxDecorator : public API::Text
+   struct BoxDecorator final : public API::Text
    {
       BoxDecorator(std::unique_ptr<API::Text> decoratee) : m_decoratee(std::move(decoratee)) {} 
 
