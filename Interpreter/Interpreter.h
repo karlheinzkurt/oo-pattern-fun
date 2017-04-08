@@ -227,9 +227,7 @@ namespace Concrete
             blockLines.push_back(line);
             return false; 
          }, [](std::string const& line) 
-         { 
-            return true; 
-         });
+         {  return true; });
          forEachLine([&](std::string const& line)
          {
             handleBlock(std::move(blockLines));
