@@ -5,6 +5,8 @@
 #include <regex>
 #include <stdexcept>
 
+namespace Detail { struct Context; } 
+
 namespace API
 {
    struct Entry
@@ -27,41 +29,11 @@ namespace API
       return os;
    }
    
-   struct ColumnSeparator
-   {
-      ColumnSeparator(std::string::value_type separator) : m_separator(separator) {}
-      operator std::string::value_type() const { return m_separator; }
-      std::string::value_type m_separator;
-   };
-   
-   struct Context
-   {
-      Context(std::istream& input, ColumnSeparator columnSeparator) : m_input(input), m_columnSeparator(columnSeparator), m_entryMap() {}
-
-      EntryMapType getEntryMap() const
-      {  return m_entryMap; }
-      
-      void addEntry(std::string key, Entry entry)
-      {  m_entryMap.emplace(EntryMapType::value_type(key, entry)); }
-      
-      std::tuple<bool, std::string> getLine() 
-      {
-         std::string s;
-         std::getline(m_input, s);
-         return std::make_tuple(!m_input.eof() && m_input.good(), s);
-      }
-      
-      std::string::value_type getColumnSeparator() const { return m_columnSeparator.m_separator; }
-   private:
-      std::istream& m_input;
-      ColumnSeparator m_columnSeparator;
-      EntryMapType m_entryMap;
-   };
-   
    struct Interpreter
    {
       virtual ~Interpreter() {}
-      virtual Context& evaluate(Context& context) = 0;
+      virtual Detail::Context& evaluate(Detail::Context& context) = 0;
+      virtual std::string toString() const = 0;
    };
 }
 
@@ -79,11 +51,61 @@ namespace Detail
        return std::string(bytes);
    }
    
+   struct SeparatorBase
+   {
+      explicit SeparatorBase(std::string::value_type separator) : m_separator(separator) {}
+      operator std::string::value_type() const { return m_separator; }
+   private:
+      std::string::value_type m_separator;
+   };
+   
+   struct ColumnSeparator : public SeparatorBase
+   {  using SeparatorBase::SeparatorBase; };
+   
+   struct SectionSeparator : public SeparatorBase
+   {  using SeparatorBase::SeparatorBase; };
+   
+   struct Context
+   {
+      Context(std::istream& input, ColumnSeparator columnSeparator, SectionSeparator sectionSeparator) : 
+          m_input(input)
+         ,m_columnSeparator(columnSeparator)
+         ,m_sectionSeparator(sectionSeparator)
+         ,m_entryMap() 
+      {}
+      
+      virtual ~Context() {};
+
+      API::EntryMapType getEntryMap() const
+      {  return m_entryMap; }
+      
+      API::EntryMapType::mapped_type& addEntry(std::string key) { return m_entryMap[key]; }
+      
+      std::tuple<bool, std::string> getLine() 
+      {
+         std::string s;
+         std::getline(m_input, s);
+         return std::make_tuple(!m_input.eof() && m_input.good(), s);
+      }
+      
+      std::string::value_type getColumnSeparator() const { return m_columnSeparator; }
+      
+      std::string::value_type getSectionSeparator() const { return m_sectionSeparator; }
+   
+      virtual std::unique_ptr<API::Interpreter> getColumnInterpreter(size_t const column, std::vector<std::string> columnLines) = 0;
+   
+   private:
+      std::istream& m_input;
+      ColumnSeparator m_columnSeparator;
+      SectionSeparator m_sectionSeparator;
+      API::EntryMapType m_entryMap;
+   };
+   
    struct KeyInterpreter : API::Interpreter
    {
       KeyInterpreter(std::vector<std::string> keyLines) : m_keyLines(keyLines), m_keys() {}
       
-      virtual API::Context& evaluate(API::Context& context) override
+      virtual Detail::Context& evaluate(Detail::Context& context) override
       {  
          for (auto& line : m_keyLines)
          { 
@@ -96,7 +118,7 @@ namespace Detail
          return context; 
       }
       
-      std::string getKey() const { return *m_keys.begin(); }
+      virtual std::string toString() const override { return *m_keys.begin(); }
       
    private:
       std::vector<std::string> m_keyLines;
@@ -107,7 +129,7 @@ namespace Detail
    {
       ValueInterpreter(std::vector<std::string> valueLines) : m_valueLines(valueLines), m_values() {}
       
-      virtual API::Context& evaluate(API::Context& context) override
+      virtual Detail::Context& evaluate(Detail::Context& context) override
       {  
          for (auto& line : m_valueLines)
          { 
@@ -120,7 +142,7 @@ namespace Detail
          return context; 
       }
       
-      std::string getValue() const { return *m_values.begin(); }
+      virtual std::string toString() const override { return *m_values.begin(); }
       
    private:
       std::vector<std::string> m_valueLines;
@@ -131,7 +153,7 @@ namespace Detail
    {
       DescriptionInterpreter(std::vector<std::string> descriptionLines) : m_descriptionLines(descriptionLines), m_description() {}
       
-      virtual API::Context& evaluate(API::Context& context) override
+      virtual Detail::Context& evaluate(Detail::Context& context) override
       { 
          std::ostringstream os;
          ///< Use boost::string::join, but here we don't the dependency to boost
@@ -150,7 +172,7 @@ namespace Detail
          return context; 
       }
       
-      std::string getDescription() const { return m_description; }
+      virtual std::string toString() const override { return m_description; }
       
    private:
       std::vector<std::string> m_descriptionLines;
@@ -161,33 +183,54 @@ namespace Detail
    {
       BlockInterpreter(std::vector<std::string> blockLines) : m_blockLines(blockLines) {}
       
-      virtual API::Context& evaluate(API::Context& context) override
+      virtual Detail::Context& evaluate(Detail::Context& context) override
       {
-         std::regex const columnBegin(format("[%c][^%c]+", context.getColumnSeparator(), context.getColumnSeparator()));
-         std::regex const trim(format("(^[%c\\s\\t]*)|([%c\\s\\t]*$)", context.getColumnSeparator(), context.getColumnSeparator()));
-         std::map<int, std::vector<std::string>> columnLines;
-         for (auto line : m_blockLines) 
-         {  
-            std::smatch match;
-            for (unsigned int column(0); std::regex_search(line, match, columnBegin); ++column)
-            {
-               columnLines[column].push_back(std::regex_replace(match.str(), trim, ""));
-               line = match.suffix().str();
+         auto const c(context.getColumnSeparator());
+         std::regex const columnBegin(format("[%c][^%c]+", c, c)); //+(?![\\])
+         std::regex const trim(format("(^[%c\\s\\t]*)|([%c\\s\\t]*$)", c, c));
+         size_t const expectedColumnCount(3);
+         std::vector<std::vector<std::string>> columnLines;
+         {
+            columnLines.reserve(expectedColumnCount);
+            size_t columnCount(0);
+            for (auto line : m_blockLines) 
+            {  
+               auto reversedLine(line);
+               std::reverse(reversedLine.begin(), reversedLine.end());
+               std::smatch match;
+               for (; std::regex_search(reversedLine, match, columnBegin); ++columnCount)
+               {
+                  columnLines.resize(columnCount + 1);
+                  auto columnLine(std::regex_replace(match.str(), trim, ""));
+                  std::reverse(columnLine.begin(), columnLine.end());
+                  columnLines[columnCount].push_back(columnLine);
+                  reversedLine = match.suffix().str();
+               }
             }
          }
-         KeyInterpreter key(std::move(columnLines[0]));
-         key.evaluate(context);
-         DescriptionInterpreter description(std::move(columnLines[1]));
-         description.evaluate(context);
-         ValueInterpreter value(std::move(columnLines[2]));
-         value.evaluate(context);
+         //std::reverse(columnLines.begin(), columnLines.end());
+         {
+            std::set<int> lineCounts;
+            for (auto const& lines : columnLines) { lineCounts.insert(lines.size()); }
+            if (lineCounts.size() != 1)
+            {  throw std::invalid_argument("Found differing column/line counts for block, lines of a block must have the same column count as all other lines"); }
+         }
          
-         API::Entry entry;
-         entry.m_value = value.getValue();
-         entry.m_description = description.getDescription();
-         context.addEntry(key.getKey(), std::move(entry));         
+         std::vector<std::unique_ptr<API::Interpreter>> columnInterpreters;
+         for (size_t columnIndex(0); columnIndex < expectedColumnCount; ++columnIndex)
+         {
+            auto columnInterpreter(context.getColumnInterpreter((expectedColumnCount-1) - columnIndex, std::move(columnLines[(expectedColumnCount-1) - columnIndex])));
+            columnInterpreter->evaluate(context);
+            columnInterpreters.emplace_back(std::move(columnInterpreter));
+         }
+         
+         auto& entry(context.addEntry(columnInterpreters[0]->toString()));
+         entry.m_value =         columnInterpreters[2]->toString();
+         entry.m_description =   columnInterpreters[1]->toString();
          return context;
       }
+      
+      virtual std::string toString() const override { throw std::logic_error("Cannot make block lines to string"); }
       
    private:
       std::vector<std::string> m_blockLines;
@@ -195,13 +238,30 @@ namespace Detail
 }
 
 namespace Concrete
-{
+{   
+   struct Context : Detail::Context 
+   { 
+      using Detail::Context::Context; 
+   
+      virtual std::unique_ptr<API::Interpreter> getColumnInterpreter(size_t const column, std::vector<std::string> columnLines) override
+      {
+         switch (column)
+         {
+            case 0: return std::make_unique<Detail::KeyInterpreter>(columnLines); break;
+            case 1: return std::make_unique<Detail::DescriptionInterpreter>(columnLines); break;
+            case 2: return std::make_unique<Detail::ValueInterpreter>(columnLines); break;
+         }
+         throw std::invalid_argument("Unsupported column interpreter requested");
+      }
+   };
+   
    struct StreamInterpreter final : API::Interpreter
    {      
-      virtual API::Context& evaluate(API::Context& context) override
+      virtual Detail::Context& evaluate(Detail::Context& context) override
       {
-         std::regex const blockBegin(Detail::format("^[%c][\\s]*([^\\s\\t%c]+[\\s]*)+[%c].*", context.getColumnSeparator(), context.getColumnSeparator(), context.getColumnSeparator()));
-         std::regex const comment(Detail::format("^[%c]([~]+[%c])+$", context.getColumnSeparator(), context.getColumnSeparator()));
+         auto const c(context.getColumnSeparator());
+         std::regex const blockBegin(Detail::format("^[%c][\\s\\t]*([^\\s\\t%c]+[\\s\\t]*)+[%c].*", c, c, c));
+         std::regex const comment(Detail::format("^[%c]([%c]+[%c])+$", c, context.getSectionSeparator(), c));
          auto forEachLine([&](auto onBlockBegin, auto onNoMatch)
          {
             for (auto lineTuple(context.getLine()); std::get<0>(lineTuple); lineTuple = context.getLine())
@@ -226,10 +286,7 @@ namespace Concrete
          { 
             blockLines.push_back(line);
             return false; 
-         }, [](std::string const& line) 
-         { 
-            return true; 
-         });
+         }, [](std::string const& line) { return true; });
          forEachLine([&](std::string const& line)
          {
             handleBlock(std::move(blockLines));
@@ -240,10 +297,11 @@ namespace Concrete
             blockLines.push_back(line);
             return true; 
          });
-         if (!blockLines.empty())
-         {  handleBlock(std::move(blockLines)); }
+         if (!blockLines.empty()) { handleBlock(std::move(blockLines)); }
          
          return context;
       }
+      
+      virtual std::string toString() const override { throw std::logic_error("Cannot make stream lines to string"); }
    };
 }
