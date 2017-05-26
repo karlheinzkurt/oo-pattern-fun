@@ -186,7 +186,13 @@ namespace Detail
       virtual Detail::Context& evaluate(Detail::Context& context) override
       {
          auto const c(context.getColumnSeparator());
-         std::regex const columnBegin(format("[%c][^%c]+", c, c)); //+(?![\\])
+         /** Column separator can occur inside with 
+          *  a backslash as a masking character before.
+          *  Current c++-regex implementation does not 
+          *  support look behind, hence we're reverting 
+          *  the lines and use look ahead to check for it.
+         */  
+         std::regex const columnBegin(format("[%c]([^%c]|([%c](?=[\\\\])))+", c, c, c));
          std::regex const trim(format("(^[%c\\s\\t]*)|([%c\\s\\t]*$)", c, c));
          size_t const expectedColumnCount(3);
          std::vector<std::vector<std::string>> columnLines;
