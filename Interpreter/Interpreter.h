@@ -286,7 +286,8 @@ namespace Concrete
          { 
             blockLines.push_back(line);
             return false; 
-         }, [](std::string const& line) { return true; });
+         }, [](std::string const& line) 
+         {  return true; });
          forEachLine([&](std::string const& line)
          {
             handleBlock(std::move(blockLines));
@@ -297,7 +298,8 @@ namespace Concrete
             blockLines.push_back(line);
             return true; 
          });
-         if (!blockLines.empty()) { handleBlock(std::move(blockLines)); }
+         if (!blockLines.empty())
+         {  handleBlock(std::move(blockLines)); }
          
          return context;
       }
