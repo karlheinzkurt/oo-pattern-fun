@@ -25,7 +25,7 @@ namespace Detail
 {
    typedef std::list<std::string> LineListType;
    
-   LineListType SplitLines(std::string text)
+   LineListType splitLines(std::string text)
    {
       std::istringstream s(text);
       std::string item;
@@ -34,7 +34,7 @@ namespace Detail
       return std::move(lines);
    }
    
-   size_t GetMaximumLength(LineListType const& lines)
+   size_t getMaximumLength(LineListType const& lines)
    {
       auto const element(std::max_element(lines.begin(), lines.end(), [](auto const& a, auto const& b){ return a.size() < b.size(); }));
       return (element == lines.end() ? 0 : element->size());
@@ -66,8 +66,8 @@ namespace Concrete
 
       virtual std::string toString() const override
       {  
-         auto lines(Detail::SplitLines(m_decoratee->toString()));
-         auto const length(Detail::GetMaximumLength(lines));
+         auto lines(Detail::splitLines(m_decoratee->toString()));
+         auto const length(Detail::getMaximumLength(lines));
          
          std::ostringstream os;
          for (auto const& l : lines) { os << '|' << l << std::string(length - l.size(), ' ') << "|\n"; }
@@ -87,8 +87,8 @@ namespace Concrete
 
       virtual std::string toString() const override
       {  
-         auto lines(Detail::SplitLines(m_decoratee->toString()));
-         auto const length(Detail::GetMaximumLength(lines));
+         auto lines(Detail::splitLines(m_decoratee->toString()));
+         auto const length(Detail::getMaximumLength(lines));
          lines.emplace_front(std::string(length, '-'));
          lines.emplace_back(lines.front());
          

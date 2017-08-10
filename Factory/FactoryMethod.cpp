@@ -2,9 +2,6 @@
 
 namespace Concrete
 {   
-   std::string Product::toString() const 
-   {  return "product"; }
-      
    std::unique_ptr<Product> Product::create()
    {
       /** We decide what type of object we deliver,
@@ -12,7 +9,8 @@ namespace Concrete
        */
       struct SpecialProduct : Product
       {
-         virtual std::string toString() const { return std::string("special ") + Product::toString(); }
+         virtual std::string toString() const override 
+         {  return std::string("special hidden product"); }
       };
       
       return std::make_unique<SpecialProduct>();
