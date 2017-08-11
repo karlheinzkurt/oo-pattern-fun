@@ -194,45 +194,59 @@ namespace Detail
          */  
          std::regex const columnBegin(format("[%c]([^%c]|([%c](?=[\\\\])))+", c, c, c));
          std::regex const trim(format("(^[%c\\s\\t]*)|([%c\\s\\t]*$)", c, c));
-         size_t const expectedColumnCount(3);
-         std::vector<std::vector<std::string>> columnLines;
+         
+         size_t lineCount(0), columnCount(0);
+         std::vector<std::string> chunks;
          {
-            columnLines.reserve(expectedColumnCount);
-            size_t columnCount(0);
+            std::set<size_t> columnCounts;
             for (auto line : m_blockLines) 
             {  
                auto reversedLine(line);
-               std::reverse(reversedLine.begin(), reversedLine.end());
-               std::smatch match;
-               for (; std::regex_search(reversedLine, match, columnBegin); ++columnCount)
+               std::reverse(reversedLine.begin(), reversedLine.end()); ///< Reverse line to have a look behind
+               size_t columnCount(0);
+               for (std::smatch match; std::regex_search(reversedLine, match, columnBegin); ++columnCount)
                {
-                  columnLines.resize(columnCount + 1);
-                  auto columnLine(std::regex_replace(match.str(), trim, ""));
-                  std::reverse(columnLine.begin(), columnLine.end());
-                  columnLines[columnCount].push_back(columnLine);
-                  reversedLine = match.suffix().str();
+                  auto lineChunk(match.str());           ///< Get the actual match.
+                  reversedLine = match.suffix().str();   ///< Put remaining stuff into reversedLine again.
+                  std::reverse(lineChunk.begin(), lineChunk.end());     ///< Re-reverse the line again
+                  lineChunk = std::regex_replace(lineChunk, trim, "");  ///< Trim line
+                  
+                  ///< Remove masking for separator.
+                  lineChunk = std::regex_replace(lineChunk, std::regex(format("[\\\\]%c", c)), format("%c", c));                 
+                  chunks.push_back(lineChunk);
                }
+               columnCounts.insert(columnCount);
+               ++lineCount;
             }
+            
+            if (columnCounts.size() != 1)
+            {  throw std::invalid_argument("Found differing column count in lines of the same block"); }
+            
+            columnCount = *columnCounts.begin();
          }
-         //std::reverse(columnLines.begin(), columnLines.end());
+         
+         std::vector<std::vector<std::string>> columnLines(columnCount);
          {
-            std::set<int> lineCounts;
-            for (auto const& lines : columnLines) { lineCounts.insert(lines.size()); }
-            if (lineCounts.size() != 1)
-            {  throw std::invalid_argument("Found differing column/line counts for block, lines of a block must have the same column count as all other lines"); }
+            size_t columnIndex(0);
+            for (auto const& c : chunks)
+            {               
+               columnLines[columnIndex].push_back(c);
+               if (++columnIndex == columnCount) { columnIndex = 0; }
+            }
+            std::reverse(columnLines.begin(), columnLines.end());
          }
          
          std::vector<std::unique_ptr<API::Interpreter>> columnInterpreters;
-         for (size_t columnIndex(0); columnIndex < expectedColumnCount; ++columnIndex)
+         for (size_t columnIndex(0); columnIndex < columnCount; ++columnIndex)
          {
-            auto columnInterpreter(context.getColumnInterpreter((expectedColumnCount-1) - columnIndex, std::move(columnLines[(expectedColumnCount-1) - columnIndex])));
+            auto columnInterpreter(context.getColumnInterpreter(columnIndex, std::move(columnLines[columnIndex])));
             columnInterpreter->evaluate(context);
             columnInterpreters.emplace_back(std::move(columnInterpreter));
          }
          
-         auto& entry(context.addEntry(columnInterpreters[0]->toString()));
-         entry.m_value =         columnInterpreters[2]->toString();
-         entry.m_description =   columnInterpreters[1]->toString();
+         auto& entry(context.addEntry( columnInterpreters[0]->toString()));
+         entry.m_description =         columnInterpreters[1]->toString();
+         entry.m_value =               columnInterpreters[2]->toString();
          return context;
       }
       
