@@ -6,7 +6,7 @@ struct Error
 {
    struct Config
    {
-      Config() : m_type(0), m_returnValue(0), m_functionName(), m_lineNumber(0) {}
+      Config() : m_type(0), m_returnValue(0), m_functionName(), m_lineNumber(0), m_stopExecution(false) {}
       
       Config& withType(int errorType) { m_type = errorType; return *this; }
       Config& withReturnValue(int returnValue) { m_returnValue = returnValue; return *this; }
@@ -16,12 +16,15 @@ struct Error
          m_lineNumber = lineNumber; 
          return *this; 
       }
-      
+      Config& stopExecution() { m_stopExecution = true; return *this; }      
       Error done()
       {
          if (m_type > 23) { m_type = 0; } // unknown type
          return Error(*this);
       }
+      
+      void handleProgress() const 
+      {  if (m_stopExecution) { std::terminate(); }}
 
       friend std::ostream& operator<<(std::ostream& os, Config const& c)
       {  return os << "with type " << c.m_type << " and return value " << c.m_returnValue << " on location " << c.m_functionName << " (" << c.m_lineNumber << ")"; }
@@ -31,9 +34,12 @@ struct Error
       int m_returnValue;
       std::string m_functionName;
       int m_lineNumber;
+      bool m_stopExecution;
    };
    
    Error(Config const& c) : m_config(c) {}
+   
+   void handleProgress() { m_config.handleProgress(); }
    
    friend std::ostream& operator<<(std::ostream& os, Error const& e)
    {  return os << "Error " << e.m_config << " occured"; }
@@ -42,4 +48,8 @@ private:
    Config m_config;
 };
 
-void print(Error e) { std::cerr << e << '\n'; }
+void print(Error e) 
+{ 
+   std::cerr << e << '\n'; 
+   e.handleProgress();
+}

@@ -22,8 +22,11 @@ int main( int argc, char** argv )
    /** Using builder to avoid confusing function parameters
     *  - No need to change signature when parameters are added
     *  - Don't care about order
+    *  - Proper handling of optional parameters
     */
    {
-      print(Error::Config().withType(5).withReturnValue(23).onLocation(__FUNCTION__, __LINE__));
+      print(Error::Config().onLocation(__FUNCTION__, __LINE__).withType(5));
+      
+      print(Error::Config().withType(5).withReturnValue(23).onLocation(__FUNCTION__, __LINE__).stopExecution());
    }
 }
