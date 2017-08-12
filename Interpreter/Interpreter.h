@@ -67,6 +67,8 @@ namespace Detail
    
    struct Context
    {
+      /** \todo Support column order configuration somehow
+       */
       Context(std::istream& input, ColumnSeparator columnSeparator, SectionSeparator sectionSeparator) : 
           m_input(input)
          ,m_columnSeparator(columnSeparator)
@@ -243,7 +245,8 @@ namespace Detail
             columnInterpreter->evaluate(context);
             columnInterpreters.emplace_back(std::move(columnInterpreter));
          }
-         
+         /** \todo Ordering of column interpreters is hardcoded
+          */
          auto& entry(context.addEntry( columnInterpreters[0]->toString()));
          entry.m_description =         columnInterpreters[1]->toString();
          entry.m_value =               columnInterpreters[2]->toString();
@@ -267,6 +270,8 @@ namespace Concrete
       {
          switch (column)
          {
+            /** \todo Ordering of the interpreters for the colums is hardcoded here, change
+             */
             case 0: return std::make_unique<Detail::KeyInterpreter>(columnLines); break;
             case 1: return std::make_unique<Detail::DescriptionInterpreter>(columnLines); break;
             case 2: return std::make_unique<Detail::ValueInterpreter>(columnLines); break;
