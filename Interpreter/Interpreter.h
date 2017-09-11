@@ -4,6 +4,8 @@
 #include <set>
 #include <regex>
 #include <stdexcept>
+#include <memory>
+#include <sstream>
 
 namespace Detail { struct Context; } 
 

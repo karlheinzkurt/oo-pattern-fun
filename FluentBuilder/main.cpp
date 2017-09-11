@@ -25,8 +25,10 @@ int main( int argc, char** argv )
     *  - Proper handling of optional parameters
     */
    {
-      print(Error::Config().onLocation(__FUNCTION__, __LINE__).withType(5));
+      handle(Error::Build().onLocation(__FUNCTION__, __LINE__).withType(5).done());
       
-      print(Error::Config().withType(5).withReturnValue(23).onLocation(__FUNCTION__, __LINE__).stopExecution());
+      handle(Error::Build().withReturnValue(23).withType(5)
+         .onLocation(__FUNCTION__, __LINE__).stopExecution().done());
+
    }
 }
